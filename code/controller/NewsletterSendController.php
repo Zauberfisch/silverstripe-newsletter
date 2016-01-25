@@ -147,8 +147,12 @@ class NewsletterSendController extends BuildTask
 
     public static function process_queue_invoke($newsletterID)
     {
-        $nsc = NewsletterSendController::inst();
-        $nsc->processQueue($newsletterID);
+        $lockFile = Director::getAbsFile(Requirements::backend()->getCombinedFilesFolder() . '/_newsletter_send_cache.lock');
+        if (!file_exists($lockFile) || (int)file_get_contents($lockFile) < time() - 180) {
+            file_put_contents($lockFile, time());
+            $nsc = NewsletterSendController::inst();
+            $nsc->processQueue($newsletterID, $lockFile);
+        }
     }
 
     /**
@@ -167,7 +171,7 @@ class NewsletterSendController extends BuildTask
         }
     }
 
-    public function processQueue($newsletterID)
+    function processQueue($newsletterID, $lockFile)
     {
         set_time_limit(0);  //no time limit for running process
 
@@ -209,6 +213,7 @@ class NewsletterSendController extends BuildTask
                     }
 
                     //retry the processing
+                    SS_Log::log(new Exception("newsletter send out restart because of error"), SS_Log::ERR);
                     $this->processQueueOnShutdown($newsletterID);
                 }
 
@@ -239,6 +244,7 @@ class NewsletterSendController extends BuildTask
                         }
                     }
 
+                    unlink($lockFile);
                     //do more processing, in case there are more items to process, do nothing if we've reached the end
                     $this->processQueueOnShutdown($newsletterID);
 
@@ -251,6 +257,7 @@ class NewsletterSendController extends BuildTask
                     $newsletter->SentDate = SS_Datetime::now()->getValue();
                     $newsletter->Status = 'Sent';
                     $newsletter->write();
+                    unlink($lockFile);
                 }
             }
         }

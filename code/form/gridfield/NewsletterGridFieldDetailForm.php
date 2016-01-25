@@ -142,14 +142,14 @@ class NewsletterGridFieldDetailForm_ItemRequest extends GridFieldDetailForm_Item
             $newNewsletter->SentDate = null;
 
             //write once without validation
-            Newsletter::set_validation_enabled(false);
+            Config::inst()->update('DataObject', 'validation_enabled', false);
             //save once to get the new Newsletter created so as to add to mailing list
             $newNewsletter->write($showDebug = false, $forceInsert = true);
             $origMailinglists = $origNewsletter->MailingLists();
             if ($origMailinglists && $origMailinglists->count()) {
                 $newNewsletter->MailingLists()->addMany($origMailinglists);
             }
-            Newsletter::set_validation_enabled(true);
+            Config::inst()->update('DataObject', 'validation_enabled', true);
             $newNewsletter->Status = 'Draft';  //custom: changing the status of to indicate we are sending
 
             //add a (1) (2) count to new newsletter names if the subject name already exists elsewhere

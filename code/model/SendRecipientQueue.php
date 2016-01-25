@@ -48,37 +48,60 @@ class SendRecipientQueue extends DataObject
     /** Send the email out to the Recipient */
     public function send($newsletter = null, $recipient = null)
     {
-        if (empty($newsletter)) {
-            $newsletter = $this->Newsletter();
-        }
-        if (empty($recipient)) {
-            $recipient = $this->Recipient();
-        }
-
-        //check recipient not blacklisted and verified
-        if ($recipient && empty($recipient->Blacklisted) && !empty($recipient->Verified)) {
-            $email = new NewsLetterEmail(
-                $newsletter,
-                $recipient
-            );
-            if (!empty($newsletter->ReplyTo)) {
-                $email->addCustomHeader('Reply-To', $newsletter->ReplyTo);
+        // fetch from database again to make sure the sent flag is not set yet
+        if (!$this->ID || self::get()->byID($this->ID)->Status != 'Sent') {
+            if (empty($newsletter)) {
+                $newsletter = $this->Newsletter();
+            }
+            if (empty($recipient)) {
+                $recipient = $this->Recipient();
             }
 
-            $success = $email->send();
+            //check recipient not blacklisted and verified
+            if ($recipient && empty($recipient->Blacklisted) && !empty($recipient->Verified)) {
+                $email = new NewsLetterEmail(
+                    $newsletter,
+                    $recipient
+                );
+                if (!empty($newsletter->ReplyTo)) {
+                    $email->addCustomHeader('Reply-To', $newsletter->ReplyTo);
+                }
 
-            if ($success) {
-                $this->Status = 'Sent';
-                $recipient->ReceivedCount = $recipient->ReceivedCount + 1;
+                $success = $email->send();
+
+                if ($success) {
+                    $this->Status = 'Sent';
+                    $recipient->ReceivedCount = $recipient->ReceivedCount + 1;
+                } else {
+                    $this->Status = 'Failed';
+                    $recipient->BouncedCount = $recipient->BouncedCount + 1;
+                }
+                $recipient->write();
             } else {
-                $this->Status = 'Failed';
-                $recipient->BouncedCount = $recipient->BouncedCount + 1;
+                $this->Status = 'BlackListed';
             }
-            $recipient->write();
-        } else {
-            $this->Status = 'BlackListed';
-        }
 
-        $this->write();
+            $this->write();
+        } else {
+            SS_Log::log(
+                new Exception("prevented sending of SendRecipientQueue #$this->ID because it has already been sent"),
+                SS_Log::ERR
+            );
+        }
+    }
+
+    public function canEdit($member = null)
+    {
+        return true;
+    }
+
+    public function canCreate($member = null)
+    {
+        return true;
+    }
+
+    public function canView($member = null)
+    {
+        return true;
     }
 }

@@ -125,4 +125,19 @@ class MailingList extends DataObject
         }
         return $this->Recipients()->exclude('Blacklisted', 1)->exclude('Verified', 0);
     }
+
+    public function canEdit($member = null)
+    {
+        return true;
+    }
+
+    public function canCreate($member = null)
+    {
+        return true;
+    }
+
+    public function canView($member = null)
+    {
+        return true;
+    }
 }

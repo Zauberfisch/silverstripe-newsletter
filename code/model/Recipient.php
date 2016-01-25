@@ -304,6 +304,21 @@ class Recipient extends DataObject
         return $can;
     }
 
+    public function canEdit($member = null)
+    {
+        return true;
+    }
+
+    public function canCreate($member = null)
+    {
+        return true;
+    }
+
+    public function canView($member = null)
+    {
+        return true;
+    }
+
     public function getFrontEndFields($params = null)
     {
         $fields = parent::getFrontEndFields($params);
